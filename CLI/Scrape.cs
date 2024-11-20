@@ -1,12 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Cocona;
 using Cocona.Application;
-using Microsoft.Extensions.Logging;
 using PixCollect.Scraping;
+using PuppeteerSharp;
 
 namespace PixCollect.CLI;
 
-public class Scrape(ScrapeSettings scrapeSettings, ILogger<Scrape> logger, ILoggerFactory loggerFactory)
+public class Scrape(ScrapeSettings scrapeSettings)
 {
     [Command(Description = "Scrape images from the web using a search term.")]
     public async Task Run(
@@ -17,18 +17,27 @@ public class Scrape(ScrapeSettings scrapeSettings, ILogger<Scrape> logger, ILogg
         int limit,
         [FromService] ICoconaAppContextAccessor contextAccessor)
     {
-        logger.LogInformation("Starting Image Scrape: query={query}, limit={limit}", query, limit);
-
+        // Download the browser executable if absent
+        Console.WriteLine("Downloading browser executable...");
+        await new BrowserFetcher().DownloadAsync();
+        
+        // Launch the browser
+        IBrowser browser = await Puppeteer.LaunchAsync(new LaunchOptions() { Headless = false });
+        
+        // Extract the cocona context and start each scraping task
         CoconaAppContext context = contextAccessor.Current ?? throw new InvalidOperationException();
         IEnumerable<Task<int>> scrapingTasks = scrapeSettings.ScrapingSources.Select(async scrapeSource =>
         {
-            ImageScraper scraper = new(scrapeSource, scrapeSettings, loggerFactory.CreateLogger<ImageScraper>());
+            await using IPage page = await browser.NewPageAsync();
+            ImageScraper scraper = new(scrapeSource, page, scrapeSettings);
             return await scraper.ScrapeAsync(query, limit, context.CancellationToken);
         });
         
+        // Count the total number of downloaded images & close the browser
         int total = (await Task.WhenAll(scrapingTasks)).Sum();
+        await browser.CloseAsync();
         
-        logger.LogInformation($"Ending Image Scrape: total={total}");
+        Console.WriteLine($"Downloaded {total} images");
     }
 
     [Command(Description = "Enable a specific image scraping source.")]
@@ -36,7 +45,6 @@ public class Scrape(ScrapeSettings scrapeSettings, ILogger<Scrape> logger, ILogg
         [Argument(Description = "The name of the image source to enable, such as 'Google' or 'Unsplash'.")]
         string source)
     {
-        logger.LogInformation($"Enabling source: {source}");
     }
 
     [Command(Description = "Disable a specific image scraping source.")]
@@ -44,7 +52,6 @@ public class Scrape(ScrapeSettings scrapeSettings, ILogger<Scrape> logger, ILogg
         [Argument(Description = "The name of the image source to disable, such as 'Google' or 'Unsplash'.")]
         string source)
     {
-        logger.LogInformation($"Disabling source: {source}");
     }
 
     [Command(Description = "Set a default configuration value for the scraper.")]
@@ -54,12 +61,10 @@ public class Scrape(ScrapeSettings scrapeSettings, ILogger<Scrape> logger, ILogg
         [Argument(Description = "The new value to assign to the specified configuration setting.")]
         string value)
     {
-        logger.LogInformation($"Setting default value: {setting} = {value}");
     }
 
     [Command(Description = "List all current configuration settings.")]
     public async Task ListSettings()
     {
-        logger.LogInformation("Listing all current settings...");
     }
 }
