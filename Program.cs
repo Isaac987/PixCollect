@@ -22,10 +22,10 @@ public class Program(IConfiguration configuration, ILogger<Program> logger)
             {
                 config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
             })
-            .ConfigureLogging(logging =>
-            {
-                logging.AddDebug();
-            })
+            // .ConfigureLogging(logging =>
+            // {
+            //     logging.AddDebug();
+            // })
             .ConfigureServices((context, services) =>
             {
                 // Bind configuration to the class
