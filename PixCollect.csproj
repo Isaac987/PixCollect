@@ -8,11 +8,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="tests\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <PackageReference Include="Cocona" Version="2.2.0" />
+      <PackageReference Include="PuppeteerSharp" Version="20.0.5" />
     </ItemGroup>
 
     <ItemGroup>
