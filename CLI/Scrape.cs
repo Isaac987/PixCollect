@@ -2,11 +2,10 @@
 using Cocona;
 using Cocona.Application;
 using PixCollect.Scraping;
-using PuppeteerSharp;
 
 namespace PixCollect.CLI;
 
-public class Scrape(ScrapeSettings scrapeSettings)
+public class Scrape(ScrapeSettings scrapeSettings, IHttpClientFactory httpClientFactory)
 {
     [Command(Description = "Scrape images from the web using a search term.")]
     public async Task Run(
@@ -17,25 +16,19 @@ public class Scrape(ScrapeSettings scrapeSettings)
         int limit,
         [FromService] ICoconaAppContextAccessor contextAccessor)
     {
-        // Download the browser executable if absent
-        Console.WriteLine("Downloading browser executable...");
-        await new BrowserFetcher().DownloadAsync();
-        
-        // Launch the browser
-        IBrowser browser = await Puppeteer.LaunchAsync(new LaunchOptions() { Headless = false });
         
         // Extract the cocona context and start each scraping task
         CoconaAppContext context = contextAccessor.Current ?? throw new InvalidOperationException();
+        await using PageFactory pageFactory = await PageFactory.CreateAsync();
+        
         IEnumerable<Task<int>> scrapingTasks = scrapeSettings.ScrapingSources.Select(async scrapeSource =>
         {
-            await using IPage page = await browser.NewPageAsync();
-            ImageScraper scraper = new(scrapeSource, page, scrapeSettings);
+            ImageScraper scraper = new(scrapeSource, pageFactory, httpClientFactory, scrapeSettings);
             return await scraper.ScrapeAsync(query, limit, context.CancellationToken);
         });
         
         // Count the total number of downloaded images & close the browser
         int total = (await Task.WhenAll(scrapingTasks)).Sum();
-        await browser.CloseAsync();
         
         Console.WriteLine($"Downloaded {total} images");
     }
