@@ -5,37 +5,33 @@ using PuppeteerSharp;
 
 namespace PixCollect.Scraping;
 
-public class ImageScraper
+public sealed class ImageScraper(string imageSource, PageFactory pageFactory, IHttpClientFactory httpClientFactory, ScrapeSettings scrapeSettings)
 {
-    private readonly IPage _page;
-    private readonly BlockingCollection<Uri> _imageUrls;
-    private readonly ImageParser _imageParser;
-    private readonly ImageDownloader _imageDownloader;
-    
-    public ImageScraper(string imageSource, IPage page, ScrapeSettings scrapeSettings)
-    {
-        _page = page;
-        _imageUrls = new BlockingCollection<Uri>();
-        _imageParser = GetImageParser(imageSource);
-        _imageDownloader = new ImageDownloader(scrapeSettings);
-    }
+    private readonly BlockingCollection<Uri> _imageUrls = new();
     
     public async Task<int> ScrapeAsync(string query, int limit, CancellationToken cancellationToken)
     {
+        Console.WriteLine($"Start scraping image: {imageSource}, {query}");
+        
+        // Create browser page, parser, and downloader
+        IPage page = await pageFactory.CreatePageAsync();
+        ImageParser parser = GetImageParser(page);
+        ImageDownloader downloader = new ImageDownloader(_imageUrls, imageSource, scrapeSettings, httpClientFactory);
+        
         // Parse and download images
-        Task<int> parse = _imageParser.ParseImagesAsync(query, limit, cancellationToken);
-        Task<int> download = _imageDownloader.DownloadImagesAsync(cancellationToken);
+        Task<int> parse = parser.ParseImagesAsync(query, limit, cancellationToken);
+        Task<int> download = downloader.DownloadImagesAsync(cancellationToken);
         int[] total = await Task.WhenAll(parse, download);
         
         // Return the total images downloaded
         return total[1];
     }
 
-    private ImageParser GetImageParser(string imageSource)
+    private ImageParser GetImageParser(IPage page)
     {
         return imageSource switch
         {
-            "google" => new GoogleImageParser(_imageUrls, _page),
+            "google" => new GoogleImageParser(_imageUrls, page),
             _ => throw new ArgumentException($"Unsupported image source: {imageSource}")
         };
     }
