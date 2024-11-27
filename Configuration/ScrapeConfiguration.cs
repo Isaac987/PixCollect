@@ -1,6 +1,6 @@
 ﻿namespace PixCollect.Scraping;
 
-public class ScrapeSettings
+public class ScrapeConfiguration
 {
     public string OutputDirectory { get; set; }
     public string Format { get; set; }
