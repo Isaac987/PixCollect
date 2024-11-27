@@ -6,15 +6,8 @@ using PixCollect.Scraping;
 
 namespace PixCollect.CLI;
 
-public class Scrape
+public class Scrape(ILogger<Scrape> logger)
 {
-    private readonly ILogger<Scrape> _logger;
-    
-    public Scrape(ILogger<Scrape> logger)
-    {
-        _logger = logger;
-    }
-    
     [Command(Description = "Scrape images from the web using a search term.")]
     public async Task Run(
         [Argument(Description = "The keyword or phrase to search for when scraping images.")] string query,
@@ -23,20 +16,20 @@ public class Scrape
         [FromService] ImageScraper scraper,
         [FromService] CoconaAppContext context)
     {
-        _logger.LogInformation("Starting scrape run: query='{query}', limit={limit}.", query, limit);
+        logger.LogInformation("Starting scrape run: query='{query}', limit={limit}.", query, limit);
 
         try
         {
             int total = await scraper.ScrapeAsync(query, limit, context.CancellationToken);
-            _logger.LogInformation("Completed scrape run: total={total}.", total);
+            logger.LogInformation("Completed scrape run: total={total}.", total);
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Scrape Run failed: query='{query}', limit={limit}.", query, limit);
+            logger.LogError(e, "Scrape Run failed: query='{query}', limit={limit}.", query, limit);
         }
         finally
         {
-            _logger.LogInformation("Scrape run finished: query='{query}', limit={limit}.", query, limit);
+            logger.LogInformation("Scrape run finished: query='{query}', limit={limit}.", query, limit);
         }
     }
 
@@ -45,7 +38,7 @@ public class Scrape
         [Argument(Description = "The name of the image source to enable, such as 'Google' or 'Unsplash'.")]
         string source)
     {
-        _logger.LogInformation("Starting Task: Scrape EnableSource");
+        logger.LogInformation("Starting Task: Scrape EnableSource");
 
     }
 
@@ -54,7 +47,7 @@ public class Scrape
         [Argument(Description = "The name of the image source to disable, such as 'Google' or 'Unsplash'.")]
         string source)
     {
-        _logger.LogInformation("Starting Task: Scrape DisableSource");
+        logger.LogInformation("Starting Task: Scrape DisableSource");
     }
 
     [Command(Description = "Set a default configuration value for the scraper.")]
@@ -64,13 +57,13 @@ public class Scrape
         [Argument(Description = "The new value to assign to the specified configuration setting.")]
         string value)
     {
-        _logger.LogInformation("Starting Task: Scrape SetDefaultValue");
+        logger.LogInformation("Starting Task: Scrape SetDefaultValue");
     }
 
     [Command(Description = "List all current configuration settings.")]
     public void ListSettings()
     {
-        _logger.LogInformation("Starting Task: Scrape ListSettings");
+        logger.LogInformation("Starting Task: Scrape ListSettings");
 
     }
 }
