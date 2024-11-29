@@ -47,6 +47,7 @@ public class Program
         
         // Register services
         builder.Services.AddTransient<ImageScraper>();
+        builder.Services.AddTransient<SiteParserFactory>();
         
         // Build and run the application
         var app = builder.Build();
