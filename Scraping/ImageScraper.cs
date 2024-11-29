@@ -1,38 +1,35 @@
-﻿using System.Collections;
-using System.Collections.Concurrent;
-using Microsoft.Extensions.Logging;
-using PuppeteerSharp;
+﻿using Microsoft.Extensions.Logging;
 
 namespace PixCollect.Scraping;
 
-public sealed class ImageScraper(string imageSource, PageFactory pageFactory, IHttpClientFactory httpClientFactory, ScrapeSettings scrapeSettings)
+public sealed class ImageScraper(
+    ScrapeConfiguration scrapeConfiguration,
+    SiteParserFactory siteParserFactory,
+    DownloaderFactory downloaderFactory,
+    ILogger<ImageScraper> logger)
 {
-    private readonly BlockingCollection<Uri> _imageUrls = new();
-    
     public async Task<int> ScrapeAsync(string query, int limit, CancellationToken cancellationToken)
     {
-        Console.WriteLine($"Start scraping image: {imageSource}, {query}");
-        
-        // Create browser page, parser, and downloader
-        IPage page = await pageFactory.CreatePageAsync();
-        ImageParser parser = GetImageParser(page);
-        ImageDownloader downloader = new ImageDownloader(_imageUrls, imageSource, scrapeSettings, httpClientFactory);
-        
-        // Parse and download images
-        Task<int> parse = parser.ParseImagesAsync(query, limit, cancellationToken);
-        Task<int> download = downloader.DownloadImagesAsync(cancellationToken);
-        int[] total = await Task.WhenAll(parse, download);
-        
-        // Return the total images downloaded
-        return total[1];
-    }
-
-    private ImageParser GetImageParser(IPage page)
-    {
-        return imageSource switch
+        IEnumerable<Task<int>> scrapingTasks = scrapeConfiguration.ScrapingSources.Select(async scrapeSource =>
         {
-            "google" => new GoogleImageParser(_imageUrls, page),
-            _ => throw new ArgumentException($"Unsupported image source: {imageSource}")
-        };
+            logger.LogInformation("Starting image scraper: site={scrapeSource}", scrapeSource);
+
+            HashSet<string> imageUrls = new();
+            await using SiteParser siteParser = await siteParserFactory.GetParserAsync(scrapeSource);
+            using Downloader downloader = downloaderFactory.GetDownloader();
+
+            // Parse the sites images and populate imageUrls
+            int parsed = await siteParser.ParseAsync(query, limit, imageUrls, cancellationToken);
+            logger.LogInformation("Parsing completed: site='{scrapingSource}', total={parsed}", scrapeSource, parsed);
+
+            // Attempt to download each image
+            int downloaded = await downloader.DownloadAsync(imageUrls, cancellationToken);
+            logger.LogInformation("Downloading completed: site='{scrapingSource}', total={parsed}", scrapeSource,
+                downloaded);
+
+            return downloaded;
+        });
+
+        return (await Task.WhenAll(scrapingTasks)).Sum();
     }
 }
