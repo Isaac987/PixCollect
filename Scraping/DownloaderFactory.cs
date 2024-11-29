@@ -3,13 +3,12 @@
 namespace PixCollect.Scraping;
 
 public sealed class DownloaderFactory(
-    ScrapeConfiguration scrapeConfiguration,
-    IHttpClientFactory httpClientFactory,
+    HttpClient httpClient,
     ILoggerFactory loggerFactory) : IDisposable
 {
     public Downloader GetDownloader()
     {
-        return new Downloader(scrapeConfiguration, httpClientFactory.CreateClient(),
+        return new Downloader(httpClient,
             loggerFactory.CreateLogger<Downloader>());
     }
 
