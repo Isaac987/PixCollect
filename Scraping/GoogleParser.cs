@@ -7,6 +7,7 @@ namespace PixCollect.Scraping;
 public sealed class GoogleParser(IPage page, ILogger<GoogleParser> logger) : SiteParser(page, logger)
 {
     private static readonly Regex ImageSourcePattern = new(@"[?&]imgurl=([^&]*)");
+    private static readonly Regex ImageExtensionPattern = new(@"\.(jpg|jpeg|png|gif|bmp|webp)(\?.*)?$");
     private const string ImageAnchorSelector = @"h3.ob5Hkd > a";
     private const string WaitForHref = @"element => element.getAttribute('href') !== null";
     private const string ExtractHref = @"element => element.getAttribute('href')";
@@ -47,8 +48,8 @@ public sealed class GoogleParser(IPage page, ILogger<GoogleParser> logger) : Sit
 
             // Extract the image source and add it to the set
             Match match = ImageSourcePattern.Match(endpoint);
-
-            if (match.Success && imageUrls.Add(match.Groups[1].Value))
+            
+            if (match.Success && ImageExtensionPattern.IsMatch(match.Groups[1].Value) && imageUrls.Add(match.Groups[1].Value))
             {
                 logger.LogTrace("Parsed image source: {source}", match.Groups[1].Value);
             }
