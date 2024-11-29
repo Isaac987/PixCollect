@@ -7,7 +7,6 @@ namespace PixCollect.Scraping;
 public sealed class GoogleParser(IPage page, ILogger<GoogleParser> logger) : SiteParser(page, logger)
 {
     private static readonly Regex ImageSourcePattern = new(@"[?&]imgurl=([^&]*)");
-    private readonly WaitForSelectorOptions ShortTimeoutOption = new WaitForSelectorOptions { Timeout = 2500 };
     private const string ImageAnchorSelector = @"h3.ob5Hkd > a";
     private const string WaitForHref = @"element => element.getAttribute('href') !== null";
     private const string ExtractHref = @"element => element.getAttribute('href')";
