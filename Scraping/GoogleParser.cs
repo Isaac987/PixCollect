@@ -12,9 +12,9 @@ public sealed class GoogleParser(IPage page, ILogger<GoogleParser> logger) : Sit
     private const string WaitForHref = @"element => element.getAttribute('href') !== null";
     private const string ExtractHref = @"element => element.getAttribute('href')";
     private const string ScrollDown = @"window.scrollTo(0, document.body.scrollHeight)";
+    private const string IsFooterVisible = @"() => document.querySelector('#sfooter').style.display === 'none'";
     
-    public override async Task<int> ParseAsync(string query, int limit, HashSet<string> imageUrls, 
-        CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<string> ParseAsync(string query, int limit)
     {
         // Navigate to google images with the search query
         logger.LogTrace("Navigating to Google, query={query}", query);
@@ -25,39 +25,43 @@ public sealed class GoogleParser(IPage page, ILogger<GoogleParser> logger) : Sit
         
         // When loading images below it caused the anchor tag to unpopulate on a collected handle
         // The solution is to ensure enough images are loaded before started the scraping process
-        while (elements.Length < limit)
-        {
+        bool canScroll = true;
+        
+        while (elements.Length < limit && canScroll)
+        { 
             await page.EvaluateExpressionAsync(ScrollDown);
+            
+            canScroll = await page.EvaluateFunctionAsync<bool>(IsFooterVisible);
             elements = await page.QuerySelectorAllAsync(ImageAnchorSelector);
         }
-            
+        
+        if (elements.Length < limit)
+        {
+            logger.LogWarning("Collected fewer images than requested: {count}/{limit}", elements.Length, limit);
+        }
+        
         foreach (IElementHandle element in elements)
         {
             // Hovering over an image populates the anchor tag with an endpoint call that contains the image source
             await element.HoverAsync();
-
+        
             // Wait for the anchor href to populate
             await page.WaitForFunctionAsync(WaitForHref, element);
-
+        
             // Extract the endpoint unescape the string
             string endpoint = await element.EvaluateFunctionAsync<string>(ExtractHref);
             endpoint = Uri.UnescapeDataString(endpoint);
-
+        
             // At this point we don't need this element
             await element.DisposeAsync();
-
+        
             // Extract the image source and add it to the set
             Match match = ImageSourcePattern.Match(endpoint);
+        
+            if (!match.Success || !ImageExtensionPattern.IsMatch(match.Groups[1].Value)) continue;
             
-            if (match.Success && ImageExtensionPattern.IsMatch(match.Groups[1].Value) && imageUrls.Add(match.Groups[1].Value))
-            {
-                logger.LogTrace("Parsed image source: {source}", match.Groups[1].Value);
-            }
-            
-            // Should we exit
-            if (imageUrls.Count >= limit || cancellationToken.IsCancellationRequested) break;
+            logger.LogTrace("Parsed image source: {source}", match.Groups[1].Value);
+            yield return match.Groups[1].Value;
         }
-
-        return imageUrls.Count;
     }
 }
