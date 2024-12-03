@@ -1,9 +1,7 @@
-﻿using System.Net;
-using Cocona;
+﻿using Cocona;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using PixCollect.CLI;
 using PixCollect.Scraping;
 
@@ -30,25 +28,29 @@ public class Program
         builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
         builder.Logging.AddConsole();
         
-        // Configure services
-        builder.Services.AddHttpClient("Client", client =>
+        // Configure HTTP Client to try and prevent bot detection
+        builder.Services.AddHttpClient("default", client =>
         {
-            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36");
+            client.DefaultRequestHeaders.Add("User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:98.0) Gecko/20100101 Firefox/98.0");
+            client.DefaultRequestHeaders.Add("Accept",
+                "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
             client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.5");
-            client.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, br");
-            client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
-            client.DefaultRequestHeaders.Add("Referer", "http://www.google.com/");
+            client.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate");
+            client.DefaultRequestHeaders.Add("Connection", "keep-alive");
             client.DefaultRequestHeaders.Add("Upgrade-Insecure-Requests", "1");
-        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-        {
-            UseCookies = true,
-            CookieContainer = new CookieContainer()
+            client.DefaultRequestHeaders.Add("Sec-Fetch-Dest", "document");
+            client.DefaultRequestHeaders.Add("Sec-Fetch-Mode", "navigate");
+            client.DefaultRequestHeaders.Add("Sec-Fetch-Site", "none");
+            client.DefaultRequestHeaders.Add("Sec-Fetch-User", "?1");
+            client.DefaultRequestHeaders.Add("Cache-Control", "max-age=0");
+            
+            client.Timeout = TimeSpan.FromSeconds(15);
         });
         
         // Register services
         builder.Services.AddTransient<ImageScraper>();
         builder.Services.AddTransient<SiteParserFactory>();
-        builder.Services.AddTransient<DownloaderFactory>();
         
         // Build and run the application
         var app = builder.Build();
