@@ -6,15 +6,17 @@ namespace PixCollect.Scraping;
 public sealed class ImageScraper(
     ScrapeConfiguration scrapeConfiguration,
     SiteParserFactory siteParserFactory,
-    HttpClient httpClient,
+    IHttpClientFactory httpClientFactory,
     ILogger<ImageScraper> logger)
 {
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient("default");
+    
     public async Task<int> ScrapeAsync(string query, int limit, CancellationToken cancellationToken)
     {
         // Create the scraping session directory
         string outputDirectory = ScrapeSession.CreateSessionDirectory(query, scrapeConfiguration.OutputDirectory);
         logger.LogInformation("Created scrape session: directory='{outputDirectory}'", outputDirectory);
-
+        
         IEnumerable<Task<int>> scrapingTasks = scrapeConfiguration.ScrapingSources.Select(async scrapeSource =>
         {
             logger.LogInformation("Starting image scraper: site={scrapeSource}", scrapeSource);
@@ -30,9 +32,17 @@ public sealed class ImageScraper(
                     await DownloadAsync(url, outputDirectory, cancellationToken);
                     count++;
                 }
+                catch (UnknownImageFormatException)
+                {
+                    logger.LogWarning("Failed to download due to unsupported file type: {url}", url);
+                }
                 catch (HttpRequestException e)
                 {
                     logger.LogWarning("Failed to download: {url}, {e}", url, e.Message);
+                }
+                catch (TaskCanceledException)
+                {
+                    logger.LogWarning("Failed to download do to timeout: {url}", url);
                 }
                 
                 if (count >= limit || cancellationToken.IsCancellationRequested) break;
@@ -47,7 +57,7 @@ public sealed class ImageScraper(
     private async Task DownloadAsync(string url, string outputDirectory, CancellationToken cancellationToken)
     {
         logger.LogTrace("Downloading: {url}", url);
-        HttpResponseMessage response = await httpClient.GetAsync(url, cancellationToken);
+        HttpResponseMessage response = await _httpClient.GetAsync(url, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
