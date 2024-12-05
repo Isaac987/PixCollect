@@ -18,6 +18,7 @@ public sealed class SiteParserFactory(ILoggerFactory loggerFactory, ILogger<Site
         return scrapingSource switch
         {
             "google" => new GoogleParser(page, loggerFactory.CreateLogger<GoogleParser>()),
+            "pixabay" => new PixabayParser(page, loggerFactory.CreateLogger<PixabayParser>()),
             _ => throw new ArgumentException($"Unsupported image source: {scrapingSource}")
         };
     }
