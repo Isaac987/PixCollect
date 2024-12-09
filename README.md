@@ -59,10 +59,13 @@ View and modify default scrape settings:
 dotnet run scrape list-settings
 
 # Update a default setting
-dotnet run scrape set-default-value <setting> <value>
+dotnet run scrape set-output-directory <directory-path>   # Change the output directory
+dotnet run scrape set-format <image-format>              # Set the default image format
+dotnet run scrape set-headless <true|false>              # Enable or disable headless mode
 ```
-- `setting`: The name of the setting to modify (e.g., threads, output).
-- `value`: The new value for the setting.
+- `directory-path`: Specifies the directory where scraped images will be saved. For example: /path/to/output..
+- `image-format`: The desired format for images (e.g., jpg, png). Must be a valid format.
+- `true|false`: Use true to enable headless mode or false to disable it.
 
 
 
