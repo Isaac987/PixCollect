@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PixCollect.CLI;
+using PixCollect.Configuration;
 using PixCollect.Scraping;
 
 namespace PixCollect;
