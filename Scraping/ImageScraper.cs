@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using PixCollect.Configuration;
 using SixLabors.ImageSharp;
 
 namespace PixCollect.Scraping;
