@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Cocona;
-using Cocona.Application;
 using Microsoft.Extensions.Logging;
 using PixCollect.Configuration;
 using PixCollect.Scraping;
