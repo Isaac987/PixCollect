@@ -45,7 +45,7 @@ public sealed class PixabayParser(IPage page, ILogger<PixabayParser> logger) : S
             await page.GoToAsync($"{BaseUrl}/{Uri.EscapeDataString(query)}/?pagi={i}");
             
             // TODO: Use a dynamic wait
-            await Task.Delay(500);
+            await Task.Delay(1000);
         }
     }
 }
