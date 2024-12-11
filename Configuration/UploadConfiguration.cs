@@ -1,6 +1,6 @@
 ﻿namespace PixCollect.Scraping;
 
-public class UploadConfiguration
+public sealed class UploadConfiguration
 {
     
 }

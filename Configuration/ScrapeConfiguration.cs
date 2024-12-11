@@ -1,8 +1,9 @@
-﻿namespace PixCollect.Scraping;
+﻿namespace PixCollect.Configuration;
 
-public class ScrapeConfiguration
+public sealed class ScrapeConfiguration
 {
-    public string OutputDirectory { get; set; }
+    public string OutputDirectory { get; set; } 
     public string Format { get; set; }
-    public string[] ScrapingSources { get; set; }
+    public bool Headless { get; set; }
+    public List<string> ScrapingSources { get; set; }
 }

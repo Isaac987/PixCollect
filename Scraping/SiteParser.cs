@@ -5,7 +5,7 @@ namespace PixCollect.Scraping;
 
 public abstract class SiteParser(IPage page, ILogger<SiteParser> logger) : IAsyncDisposable
 {
-    public abstract Task<int> ParseAsync(string query, int limit, HashSet<string> imageUrls, CancellationToken cancellationToken);
+    public abstract IAsyncEnumerable<string> ParseAsync(string query, int limit);
 
     public async ValueTask DisposeAsync()
     {
